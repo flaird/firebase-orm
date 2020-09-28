@@ -50,12 +50,7 @@ const getOrCreateUserDocument = async (user, additionalData = {}) => {
       isAdmin: false,
     });
   }
-  let userDocument;
-  return getUserDocument(user.uid, (data) => {
-    userDocument = {
-      data,
-    };
-  });
+  return getUserDocument(user.uid, (data) => data);
 };
 
 export {
