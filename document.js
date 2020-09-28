@@ -4,30 +4,36 @@ import {
   subscribedListeners
 } from '.';
 
-const getDocument = (path) => {
+const getDocument = async (path) => {
   if (!path) {
     console.log('firebase: getDocument - missing parameters');
     return false;
   }
-  let document;
-  firestore
-    .doc(path)
-    .get()
-    .then((doc) => {
-      if (doc.exists) {
-        const {
-          id
-        } = doc;
-        document = doc.data();
-        document.id = id;
-        return document;
-      } else {
-        return false;
-      }
-    })
-    .catch((error) => {
-      console.log('firebase: getDocument - error', error);
-    });
+  let document = undefined;
+  try {
+    await firestore
+      .doc(path)
+      .get()
+      .then((doc) => {
+        if (doc.exists) {
+          const {
+            id
+          } = doc;
+          document = doc.data();
+          document.id = id;
+        } else {
+          console.log('firebase: getDocument - document does not exist');
+          return false;
+        }
+      })
+      .catch((error) => {
+        console.log('firebase: getDocument - error', error);
+      });
+  } catch (error) {
+    console.log('firebase: getDocument -outer  error', error);
+  };
+  return document;
+
 };
 
 const getDocumentWhere = (path, key, operator, value) => {
@@ -57,7 +63,7 @@ const getDocumentWhere = (path, key, operator, value) => {
     });
 };
 
-const getDocumentSnapshot = (path, callback = () => {}) => {
+const getDocumentSnapshot = (path, callback = () => { }) => {
   if (!path) {
     console.log('firebase: getDocumentSnapshot - missing parameters');
     return false;
@@ -79,7 +85,7 @@ const getDocumentSnapshot = (path, callback = () => {}) => {
   subscribedListeners.push(listener);
 };
 
-const setDocument = (collection, id, document) => {
+const setDocument = async (collection, id, document) => {
   if (!collection || !id || !document) {
     console.log('firebase: setDocument - missing parameters');
     return false;
@@ -100,29 +106,51 @@ const addDocument = (collection, document) => {
     .add(document)
     .then((docRef) => {
       console.log('firebase: addDocument - Document written with ID: ', docRef.id);
+      return true;
     })
     .catch((error) => {
       console.error('firebase: addDocument - Error adding document: ', error);
+      return false;
     });
 };
 
-const deleteDocument = (collection, id) => {
+const updateDocument = async (path, document) => {
+  if (!path) {
+    console.log('firebase: updateDocument - missing parameters');
+    return false;
+  }
+  await firestore
+    .doc(path)
+    .update(document)
+    .then(() => {
+      console.log('firebase: updateDocument - Document updated.');
+      return true;
+    })
+    .catch((error) => {
+      console.error('firebase: updateDocument - Error updating document: ', error);
+      return false;
+    });
+};
+
+const deleteDocument = async (collection, id) => {
   if (!collection) {
     console.log('firebase: deleteDocument - missing parameters');
     return false;
   }
-  firestore
+  await firestore
     .collection(collection)
     .doc(id)
     .delete()
     .then(() => {
       console.log('firebase: deleteDocument - Deleted document with ID ' + id);
+      return true;
     })
     .catch((error) => {
       console.error(
         'firebase: deleteDocument - Error deleting document ID ' + id + ' from path: ' + collection,
         error
       );
+      return false;
     });
 };
 
@@ -137,8 +165,10 @@ const updateDocumentArray = (path, key, value) => {
     document.update({
       [key]: firebase.firestore.FieldValue.arrayUnion(value),
     });
+    return true;
   } catch (error) {
     console.error('firebase: updateDocumentArray - Error updating array', error);
+    return false;
   }
 };
 
@@ -152,8 +182,10 @@ const deleteFromDocumentArray = (path, key, value) => {
     document.update({
       [key]: firebase.firestore.FieldValue.arrayRemove(value),
     });
+    return true;
   } catch (error) {
     console.error('firebase: deleteFromDocumentArray - Error updating array', error);
+    return false;
   }
 };
 
@@ -193,6 +225,7 @@ export {
   getDocumentSnapshot,
   setDocument,
   addDocument,
+  updateDocument,
   deleteDocument,
   updateDocumentArray,
   deleteFromDocumentArray,
